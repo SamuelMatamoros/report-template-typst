@@ -136,7 +136,7 @@
   ]
 
   // authors
-  if authors.len() < 5 {
+  if authors.len() < MAX_AUTHORS_LEN {
     context{
       let a = authors.sorted(key: k => measure(k.name + " " + k.surname).width).rev()
       set text(16pt)
