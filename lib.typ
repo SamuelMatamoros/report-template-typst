@@ -5,6 +5,9 @@
 
 
 #let azuluc3m = rgb("#000e78")
+// This constant is used to check whether the authors should be displayed in
+// reduced form or if all authors fit.
+#let MAX_AUTHORS_LEN = 6 
 
 // Fix in order to display the month in spanish
 #let MONTHS = (
@@ -29,25 +32,29 @@
 /// - authors (array): An array containing the authors information to iterate through
 /// -> content
 #let _shortauthors(authors: ()) = {
-  for (i, author) in authors.enumerate() {
-    // name
-    for name in author.name.split(" ") {
-      name.at(0) + ". "
-    }
+  if authors.len() < MAX_AUTHORS_LEN {
+    for (i, author) in authors.enumerate() {
+      // name
+      for name in author.name.split(" ") {
+        name.at(0) + ". "
+      }
 
-    // surname
-    if "surname_length" in author {
-      author.surname.split(" ").slice(0, count: author.surname_length).join(" ")
-    } else {
-      author.surname.split(" ").at(0)
-    }
+      // surname
+      if "surname_length" in author {
+        author.surname.split(" ").slice(0, count: author.surname_length).join(" ")
+      } else {
+        author.surname.split(" ").at(0)
+      }
 
-    // connector
-    if i < authors.len() - 2 {
-      ", "
-    } else if i == authors.len() - 2 {
-      " & "
+      // connector
+      if i < authors.len() - 2 {
+        ", "
+      } else if i == authors.len() - 2 {
+        " & "
+      }
     }
+  } else {
+    authors.at(0).name.at(0) + ". " + authors.at(0).surname.split(" ").at(0) + " et al."
   }
 }
 
@@ -130,12 +137,25 @@
 
   // authors
   if authors.len() < 5 {
-    set text(20pt)
-    for author in authors [
-      #author.name #author.surname --- #link(
-        "mailto:" + str(author.nia) + "@alumnos.uc3m.es",
-      )[#author.nia]\
-    ]
+    context{
+      let a = authors.sorted(key: k => measure(k.name + " " + k.surname).width).rev()
+      set text(16pt)
+      for author in a {
+        align(center, grid(
+          columns: (
+            calc.max(..authors.map(x => measure(x.name + " " + x.surname).width)), 
+            auto, 
+            calc.max(..authors.map(x => measure(str(x.nia)).width))
+          ),
+          gutter: 12pt,
+          align: (right, center, left),
+          // stroke: 1pt + green, // debug purposes
+          [#author.name #author.surname], [-], [#link("mailto:" + str(author.nia) + "@alumnos.uc3m.es", str(author.nia))]
+        )
+      )
+    }
+  }
+
   } else {
     for i in range(calc.ceil(authors.len() / 3)) {
       let end = calc.min((i + 1) * 3, authors.len())
@@ -362,11 +382,11 @@
 
       #set align(right)
       #set text(azuluc3m)
-      #if authors.len() < 5 { 
+      #if team != none [ 
+        #team 
+      ] else {
         _shortauthors(authors: authors)
-      } else [
-        #team
-      ]
+      }
       #h(1fr)
       #let page_delimeter = "of"
       #if language == "es" {
